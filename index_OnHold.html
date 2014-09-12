@@ -1,0 +1,296 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    	<meta http-equiv="X-UA-Compatible" content="IE=7, IE=8">
+    	<meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
+		<!--The viewport meta tag is used to improve the presentation and behavior of the map on iOS devices-->
+    	<meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
+ 		<title>Olathe Map Viewer</title>
+		<link rel="shortcut icon" href="../mapviewer/images/favicon.ico">
+		<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/2.7/js/dojo/dijit/themes/tundra/tundra.css">
+	    <link rel="stylesheet" type="text/css" href="../mapviewer/css/style.css">
+	    <!--[if lt IE 7]>
+	      <link rel="stylesheet" type="text/css" href="../mapviewer/css/style_ie6.css">
+	    <![endif]-->
+		<style type="text/css">
+			@import "/dojox/grid/resources/Grid.css";
+			@import "/dojox/grid/resources/tundraGrid.css";
+
+			.dojoxGrid table { margin: 0; }
+		</style>
+		<script type="text/javascript">
+			var djConfig = {
+			    parseOnLoad: true,
+				baseUrl: "./",
+				dojoBlankHtmlUrl: "/Map2PDF/dojo/resources/blank.html",
+				modulePaths: { "dijits": "../mapviewer/dijits" }
+			}
+		</script>
+		<script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=2.7"></script>
+		
+		<script type="text/javascript" src="config/config.js"></script>
+		<script type="text/javascript" src="../mapviewer/js/layer.js"></script>
+		<script type="text/javascript" src="../mapviewer/js/load.js"></script>
+
+	    <script type="text/javascript">
+			// get the browser and version information
+			var browser = navigator.appName;
+			var version = parseFloat(navigator.appVersion);
+
+			function isUndefined(x) {
+				var u;
+				return x === u;
+			}
+
+			function displayError(err) {
+				alert(err.details + "\nError code: " + err.code);
+			}
+
+			function fireClickEvent(e, btnId) {
+				var charCode;
+				if (e && e.which) {
+					e = e;
+					charCode = e.which;
+				} else {
+					charCode = e.keyCode
+				}
+
+				if (charCode == 13) {
+					dojo.byId(btnId).click();
+					return false;
+				} else {
+					return true;
+				}
+			}
+
+			function showCoordinates(evt) {
+				//get mapPoint from event
+				var mp = evt.mapPoint;
+				//display mouse coordinates
+				window.status = mp.x + ", " + mp.y;
+			}
+
+			dojo.addOnLoad(init);
+	    </script>
+		<script type="text/javascript" src="../mapviewer/js/id.js"></script>
+		<script type="text/javascript" src="../mapviewer/js/geocode.js"></script>
+		<script type="text/javascript" src="../mapviewer/js/query.js"></script>
+		<!---<script type="text/javascript" src="../mapviewer/js/shortcut.js"></script>
+		<script type="text/javascript" src="../mapviewer/js/premap.js"></script>--->
+		<script type="text/javascript" src="../mapviewer/js/result.js"></script>
+		<script type="text/javascript" src="../mapviewer/js/tools.js"></script>
+		<script type="text/javascript" src="../mapviewer/js/help.js"></script>
+		<script type="text/javascript" src="../mapviewer/js/Map2PDF/MapPrinter.js"></script>
+		
+		<script type="text/javascript">
+			<!--//--><![CDATA[//><!--
+			var _gaq = _gaq || [];_gaq.push(["_setAccount", "UA-17781489-2"]);_gaq.push(["_trackPageview"]);(function() {var ga = document.createElement("script");ga.type = "text/javascript";ga.async = true;ga.src = "/files/googleanalytics/ga.js?4";var s = document.getElementsByTagName("script")[0];s.parentNode.insertBefore(ga, s);})();
+			//--><!]]>
+		</script>
+
+		<script type="text/javascript">
+
+		</script>
+	</head>
+	<body class="tundra">
+	    <div dojotype="dijit.layout.BorderContainer" design="headline" gutters="false" style="width: 100%; height: 100%; margin: 0;">
+	        <!--CHILD CONTAINER-->
+	        <div id="map-div" dojotype="dijit.layout.ContentPane" region="center" style="overflow:hidden;">
+				<div id="header-bg"></div>
+			  	<div id="header-wrapper">
+					<div id="left-header-region">
+						<div id="site-header-wrapper">
+							<img id="site-header-logo" src="blank.gif" class="png-fix" alt="" />
+						</div>
+						<div id="nav-wrapper" dojoType="dijit.Toolbar">
+							<div dojoType="dijit.form.Button" id="zoomfullext" iconClass="zoomfullextIcon" title="Zoom to Full Extent" onClick="CustomFullExtent();"></div>
+							<div dojoType="dijit.form.Button" id="zoomprev" iconClass="zoomprevIcon" title="Zoom to Previous Extent" onClick="navToolbar.zoomToPrevExtent();"></div>
+							<div dojoType="dijit.form.Button" id="zoomnext" iconClass="zoomnextIcon" title="Zoom to Next Extent" onClick="navToolbar.zoomToNextExtent();"></div>
+						</div>
+						<div id="btn-wrapper" dojoType="dijit.Toolbar">
+							<div dojoType="dijit.form.Button" id="layerinfo" iconClass="layerinfoIcon" title="Show the Layer List" onClick="showResultDiv('layer-list-wrapper');"></div>
+							<!-- <div dojoType="dijit.form.Button" id="resultwin" iconClass="resultwinIcon" title="Show Result Displays" onClick="showShadow(); openDiv('floating-wrapper'); setupResultTools('floating-top-left', 'floating-middle');"></div> -->
+							<div dojoType="dijit.form.Button" id="searchtool" iconClass="searchtoolIcon" title="Show the Search Tool" onClick="openDiv('query-tools-wrapper');"></div>
+							<div dojoType="dijit.form.Button" id="clearresults" iconClass="clearresultsIcon" title="Clear Result Sets and Graphics" onClick="showShadow(); openDiv('floating-wrapper'); setupClearResults('floating-top-left', 'floating-middle');"></div>
+							<div dojoType="dijit.form.Button" id="printmap" iconClass="printmapIcon" title="Print this Map" onClick="showShadow(); openDiv('floating-wrapper'); setupPrintTool('floating-top-left', 'floating-middle');"></div>
+						</div>
+						<div id="header-caption"></div>
+					</div>
+					<div id="right-header-region">
+						<div id="geocode-wrapper">
+							<div id="geocode-label"><img src="../mapviewer/images/geocodelabel.png" class="png-fix" alt="Find an Address" /></div>
+							<div id="geocode-input">
+								<input id="address" type="text" value="100 E Santa Fe St" onkeypress="fireClickEvent(event, 'locate-btn');" />
+								<input id="locate-btn" type="image" src="../mapviewer/images/geocodebtn.png" class="png-fix" alt="Find Location" title="Find Location" onclick="locate();" />
+							</div>
+						</div>
+						<div id="scale-control">
+							<input type="image" id="mapscale-btn" src="../mapviewer/images/mapscale_on_btn.png" class="png-fix" alt="Show Scale Bar" title="Show Scale Bar" onclick="showScaleBar();" style="cursor: pointer;" />
+						</div>
+						<div id="slider-wrapper">
+							<div id="opacity-slider" dojoType="dijit.form.HorizontalSlider" value="1" minimum="0" maximum="1" discreteValues="100" intermediateChanges="true" onChange="setOpacity(dojo.number.format(arguments[0]))">
+								<ol dojoType="dijit.form.HorizontalRuleLabels" container="bottomDecoration" style="height:.5em;font-family:Arial, Helvetica, sans;font-size:11px;">
+									<li><input type="image" src="../mapviewer/images/opacitybtn_photo.png" class="png-fix opacity-slider-btn" alt="Show PHOTO Only" title="Show Photo ONLY" onclick="changeOpacity(0)" style="cursor: pointer;" /></li>
+									<li><input type="image" src="../mapviewer/images/opacitybtn_both.png" class="png-fix opacity-slider-btn" alt="Show MAP and PHOTO" title="Show MAP and PHOTO" onclick="changeOpacity(0.5)" style="cursor: pointer;" /></li>
+									<li><input type="image" src="../mapviewer/images/opacitybtn_map.png" class="png-fix opacity-slider-btn" alt="Show MAP Only" title="Show MAP Only" onclick="changeOpacity(1)" style="cursor: pointer;" /></li>
+								</ol>
+							</div>
+						</div>
+						<div id="help-wrapper" dojoType="dijit.Toolbar">
+							<div dojoType="dijit.form.Button" id="sitehelp" iconClass="sitehelpIcon" title="Get Help Using This Site" onClick="showShadow(); openDiv('floating-wrapper'); setupMapNavHelp('floating-middle');"></div>
+						</div>
+					</div>
+			  	</div>
+				<div id="tools-wrapper">
+					<div id="query-tools-wrapper">
+						<div id="query-tools-top">
+							<div id="query-tools-top-left" title="Popular Searches">
+								<img id="query-tools-div-label" src="../mapviewer/images/query_header_label.png" class="png-fix" alt="Popular Searches" />
+							</div>
+							<div id="query-tools-top-right">
+								<input type="image" id="query-tools-close-btn" src="../mapviewer/images/result_close_btn.png" class="png-fix window-btn" alt="Close" title="Close" onclick="closeDiv('query-tools-wrapper');" />
+							</div>
+						</div>
+						<div id="query-tools-bottom">
+							<div id="query-select-label">
+								<img src="../mapviewer/images/query_select_label.png" border="0" class="png-fix" alt="Search..." />
+							</div>
+							<div id="query-select">
+								<select id="query-select-desc" onchange="setupQuery(this.value);"><option value="-1" selected>Select...</option></select>
+							</div>
+							<div id="query-value-label">
+								<img src="../mapviewer/images/query_value_label.png" border="0" class="png-fix" alt="Search for..." />
+							</div>
+							<div id="status-wrapper-query">Building list, please wait...</div>
+							<div id="query-value-list">
+								<select id="query-value-list-items" onchange="doSearchQuery()"></select>
+							</div>
+							<div id="query-value-text">
+								<input id="query-value-text-item" type="text" size="25" value="" onkeypress="fireClickEvent(event, 'query-btn');" />
+							</div>
+							<div id="query-btn-wrapper">
+								<input id="query-btn" type="image" src="../mapviewer/images/querybtn.png" class="png-fix" alt="Do Search" onclick="doSearchQuery();" />
+							</div>
+							<div id="query-select-help"></div>
+							<div id="query-value-example"></div>
+						</div>
+					</div>
+				</div>
+				<div id="result-wrapper">
+					<div id="layer-list-wrapper">
+						<div id="layer-list-top">
+							<div id="layer-list-top-left-icon"></div>
+							<div id="layer-list-top-left-label" class="png-fix"></div>
+							<div id="layer-list-top-right">
+								<input type="image" id="layer-min-max-btn" src="../mapviewer/images/result_min_btn.png" class="png-fix window-btn" alt="Minimize" title="Minimize" onclick="minimizeDiv('layer-list-wrapper'); swapResultBtn(null);" />
+								<input type="image" id="layer-close-btn" src="../mapviewer/images/result_close_btn.png" class="png-fix window-btn" alt="Close" title="Close" onclick="closeDiv('layer-list-wrapper'); swapResultBtn(null);" />
+							</div>
+						</div>
+						<div id="layer-list-left"></div>
+						<div id="layer-list-center">
+							<div id="layer-list-center-top"></div>
+							<div id="layer-list-center-bottom">
+								<div>Change the transparency of these layers:</div>
+								<script type="text/javascript" language="JavaScript">
+									document.writeln('<div id="dynamic-opacity-slider" dojoType="dijit.form.HorizontalSlider" value="' + mapLayers["dynamic"].serviceOpacity + '" minimum="0" maximum="1" discreteValues="100" intermediateChanges="true" onChange="setDynamicOpacity(dojo.number.format(arguments[0]))">');
+								</script>
+								</div>
+							</div>
+						</div>
+						<div id="layer-list-right"></div>
+						<div id="layer-list-bottom"></div>
+					</div>
+					<div id="id-result-wrapper">
+						<div id="id-result-top">
+							<div id="id-result-top-left-icon"></div>
+							<div id="id-result-top-left-label"></div>
+							<div id="id-result-top-right">
+								<input type="image" id="id-min-max-btn" src="../mapviewer/images/result_min_btn.png" class="png-fix window-btn" alt="Minimize" title="Minimize" onclick="minimizeDiv('id-result-wrapper'); swapResultBtn(null);" />
+								<input type="image" id="id-close-btn" src="../mapviewer/images/result_close_btn.png" class="png-fix window-btn" alt="Close" title="Close" onclick="closeDiv('id-result-wrapper'); swapResultBtn(null);" />
+							</div>
+						</div>
+						<div id="id-result-left"></div>
+						<div id="id-result-center"></div>
+						<div id="id-result-right"></div>
+						<div id="id-result-bottom">
+							<div id="id-result-bottom-link"></div>
+							<div id="id-result-bottom-options"></div>
+						</div>
+					</div>
+					<div id="geocode-result-wrapper">
+						<div id="geocode-result-top">
+							<div id="geocode-result-top-left-icon"></div>
+							<div id="geocode-result-top-left-label"></div>
+							<div id="geocode-result-top-right">
+								<input type="image" id="geocode-min-max-btn" src="../mapviewer/images/result_min_btn.png" class="png-fix window-btn" alt="Minimize" title="Minimize" onclick="minimizeDiv('geocode-result-wrapper'); swapResultBtn(null);" />
+								<input type="image" id="geocode-close-btn" src="../mapviewer/images/result_close_btn.png" class="png-fix window-btn" alt="Close" title="Close" onclick="closeDiv('geocode-result-wrapper'); swapResultBtn(null);" />
+							</div>
+						</div>
+						<div id="geocode-result-left"></div>
+						<div id="geocode-result-center"></div>
+						<div id="geocode-result-right"></div>
+						<div id="geocode-result-bottom">
+							<div id="geocode-result-bottom-options"></div>
+						</div>
+					</div>
+					<div id="query-result-wrapper">
+						<div id="query-result-top">
+							<div id="query-result-top-left-icon"></div>
+							<div id="query-result-top-left-label"></div>
+							<div id="query-result-top-right">
+								<input type="image" id="query-min-max-btn" src="../mapviewer/images/result_min_btn.png" class="png-fix window-btn" alt="Minimize" title="Minimize" onclick="minimizeDiv('query-result-wrapper'); swapResultBtn(null);" />
+								<input type="image" id="query-close-btn" src="../mapviewer/images/result_close_btn.png" class="png-fix window-btn" alt="Close" title="Close" onclick="closeDiv('query-result-wrapper'); swapResultBtn(null);" />
+							</div>
+						</div>
+						<div id="query-result-left"></div>
+						<div id="query-result-center"></div>
+						<div id="query-result-right"></div>
+						<div id="query-result-bottom"></div>
+					</div>
+				</div>
+				<div id="result-btn-wrapper">
+					<input type="image" id="layer-list-btn" class="png-fix" src="../mapviewer/images/layer_list_btn_off.png" alt="Layer List" title="Layer List" onclick="showLayerList('layer-list');" /><br />
+					<input type="image" id="id-result-btn" class="png-fix" src="../mapviewer/images/identify_btn_off.png" alt="Identified Features" title="Identified Features" onclick="showIdResultGroups('id-result');" /><br />
+					<input type="image" id="geocode-result-btn" class="png-fix" src="../mapviewer/images/geocode_btn_off.png" alt="Location Results" title="Location Results" onclick="showGeocodeResultList(-1, 'geocode-result');" /><br />
+					<input type="image" id="query-result-btn" class="png-fix" src="../mapviewer/images/query_btn_off.png" alt="Search Results" title="Search Results" onclick="showQueryResults('query-result');" />
+				</div>
+				<div id="scale-bar-wrapper">
+					<div id="scale-bar-left"></div>
+					<div id="scale-bar-middle">
+						<div id="scale-bar-labels">
+							<span id="scale-label-1" class="scale-label first"></span>
+							<span id="scale-label-2"  class="scale-label"></span>
+							<span id="scale-label-3"  class="scale-label"></span>
+							<span id="scale-label-4"  class="scale-label"></span>
+							<span id="scale-label-5"  class="scale-label last"></span>
+						</div>
+						<div id="scale-bar">
+							<span id="scale-div-1" class="scale-div odd"><img id="scale-div-1-img" src="../mapviewer/images/dark_gray_bar.png" border="0" /></span>
+							<span id="scale-div-2" class="scale-div even"><img id="scale-div-2-img" src="../mapviewer/images/lt_gray_bar.png" border="0" /></span>
+							<span id="scale-div-3" class="scale-div odd"><img id="scale-div-3-img" src="../mapviewer/images/dark_gray_bar.png" border="0" /></span>
+							<span id="scale-div-4" class="scale-div even"><img id="scale-div-4-img" src="../mapviewer/images/lt_gray_bar.png" border="0" /></span>
+						</div>
+					</div>
+					<div id="scale-bar-right"></div>
+				</div>
+			</div>
+	    </div>
+		<div id="shadow"></div>
+		<div id="status-wrapper-screen"><img src="../mapviewer/images/status.gif" border="0" hspace="0" vspace="0" alt="Please wait..." /></div>
+		<div id="loading-logo"><a href="http://www.olatheks.org/gis" target="_blank" title="Olathe GIS"><img src="../mapviewer/images/olathe_gis_small.png" class="png-fix" alt="Olathe GIS" /></a></div>
+		<div id="loading-message"><span>If you experience problems loading this page, <a href="" title="Reload This Page">click here</a> to reload the application.</span></div>
+		<div id="floating-wrapper">
+			<div id="floating-top">
+				<div id="floating-top-left">
+				</div>
+				<div id="floating-top-right">
+					<input type="image" id="floating-close-btn" src="../mapviewer/images/result_close_btn.png" class="png-fix window-btn" alt="Close" title="Close" onclick="closeDiv('floating-wrapper'); hideShadow();" />
+				</div>
+			</div>
+			<div id="floating-middle"></div>
+			<div id="floating-bottom"></div>
+		</div>
+	</body>
+</html>
